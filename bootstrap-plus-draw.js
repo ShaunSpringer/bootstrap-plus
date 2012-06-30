@@ -13,10 +13,9 @@
     , Draw = function (element, options) {
       this.options = $.extend({}, $.fn.draw.defaults, options)
       this.points = []
-      this.date = new Date()
       this.$element = $(element).parent()
         .on('mousedown.draw.data-api', '[data-draw="canvas"]', $.proxy(this.start, this))
-        .on('click.draw.data-api', '[data-clear="draw"]', $.proxy(this.clear, this))
+        .on('click', '[data-clear="draw"]', $.proxy(this.clear, this))
       this.$canvas = $(canvas, this.$element)
       this.c = this.$canvas.get(0).getContext('2d')
       this.offset = this.$element.offset()
@@ -35,11 +34,9 @@
 
       var x = e.offsetX
         , y = e.offsetY
-        , c = this.c
-
+        
       this.addPoint(x, y)
-      c.beginPath()
-      c.moveTo(x, y)
+      this.drawPoint(x, y, 1)
     }
 
     , stop: function(e) {
@@ -53,29 +50,66 @@
 
     , move: function(e) {
       e && e.preventDefault()
-      window.requestAnimationFrame(this.move)
 
       var x = e.offsetX
         , y = e.offsetY
-        , c = this.c
 
-      this.addPoint(x, y)
+      this.addLine(x, y)
+      this.drawLine(x, y)
+    }
+    , drawPoint: function(x, y) {
+      var c = this.c
+      c.beginPath()
+      c.moveTo(x, y)
+    }
+
+    , drawLine: function(x, y) {
+      var c = this.c      
       c.lineTo(x, y)
       c.stroke()
     }
 
     , addPoint: function(x, y) {
-      this.points.push({ x: x, y: y, t: this.date.getTime() })
+      this.points.push({ x: x, y: y, t: new Date().getTime(), p: true })
+    }
+
+    , addLine: function(x, y) {
+      this.points.push({ x: x, y: y, t: new Date().getTime(), p: false })
     }
 
     , clear: function() {
       var c = this.c
         , $canvas = this.$canvas
-      c.clearRect(0, 0, $canvas.width(), $canvas.height());
+      c.clearRect(0, 0, $canvas.width(), $canvas.height())
       this.points = []
     }
-  } 
 
+    , play: function(data) {
+      !data && (data = this.points)
+      this.clear()
+      var c = this.c
+        , i
+
+      for (i = 0; i < data.length; i++) {
+        var pt = data[i]
+          , x = pt.x
+          , y = pt.y
+          , t = pt.t
+          , p = pt.p
+          setTimeout(function(){
+            (function(c, p, x, y){
+              if (p) {
+                c.beginPath()
+                c.moveTo(x, y)
+              } else {
+                c.lineTo(x, y)
+                c.stroke()
+              }
+            })(c, p, x, y)
+          }, 0)
+      }
+    }
+  } 
 
  /* DRAW PLUGIN DEFINITION
   * ======================== */
@@ -102,35 +136,3 @@
   })
 
 }(window.jQuery);
-
-
-// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
-// http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
- 
-// requestAnimationFrame polyfill by Erik Möller
-// fixes from Paul Irish and Tino Zijdel
- 
-(function() {
-    var lastTime = 0;
-    var vendors = ['ms', 'moz', 'webkit', 'o'];
-    for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
-        window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
-        window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame']
-                                   || window[vendors[x]+'CancelRequestAnimationFrame'];
-    }
- 
-    if (!window.requestAnimationFrame)
-        window.requestAnimationFrame = function(callback, element) {
-            var currTime = new Date().getTime();
-            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
-            var id = window.setTimeout(function() { callback(currTime + timeToCall); },
-              timeToCall);
-            lastTime = currTime + timeToCall;
-            return id;
-        };
- 
-    if (!window.cancelAnimationFrame)
-        window.cancelAnimationFrame = function(id) {
-            clearTimeout(id);
-        };
-}());
