@@ -16,9 +16,13 @@
       this.$element = $(element).parent()
         .on('mousedown.draw.data-api', '[data-draw="canvas"]', $.proxy(this.start, this))
         .on('click', '[data-clear="draw"]', $.proxy(this.clear, this))
+        .on('click', '[data-color]', $.proxy(this.setColor, this))
+        .on('click', '[data-size]', $.proxy(this.setSize, this))
       this.$canvas = $(canvas, this.$element)
       this.c = this.$canvas.get(0).getContext('2d')
       this.offset = this.$element.offset()
+      this.color = "#000"
+      this.size = 1
     }
 
   Draw.prototype = {
@@ -64,17 +68,19 @@
     }
 
     , drawLine: function(x, y) {
-      var c = this.c      
+      var c = this.c   
+      c.strokeStyle = this.color
+      c.lineWidth = this.size
       c.lineTo(x, y)
       c.stroke()
     }
 
     , addPoint: function(x, y) {
-      this.points.push({ x: x, y: y, t: new Date().getTime(), p: true })
+      this.points.push({ x: x, y: y, t: new Date().getTime(), isPoint: true, color: this.color, size: this.size })
     }
 
     , addLine: function(x, y) {
-      this.points.push({ x: x, y: y, t: new Date().getTime(), p: false })
+      this.points.push({ x: x, y: y, t: new Date().getTime(), isPoint: false, color: this.color, size: this.size })
     }
 
     , clear: function() {
@@ -82,6 +88,24 @@
         , $canvas = this.$canvas
       c.clearRect(0, 0, $canvas.width(), $canvas.height())
       this.points = []
+    }
+
+    , setColor: function(color) {
+      if (typeof color == 'string')
+        return this.color = color
+
+      var $t = $(color.currentTarget)
+      this.color = $t.data('color')
+      return true;
+    }
+
+    , setSize: function(size) {
+      if (typeof size == 'string')
+        return this.size = size
+
+      var $t = $(size.currentTarget)
+      this.size = $t.data('size')
+      return true;
     }
 
     , play: function(data) {
@@ -95,13 +119,18 @@
           , x = pt.x
           , y = pt.y
           , t = pt.t
-          , p = pt.p
+          , p = pt.isPoint
+          , co = pt.color
+          , s = pt.size
           setTimeout(function(){
             (function(c, p, x, y){
               if (p) {
                 c.beginPath()
                 c.moveTo(x, y)
               } else {
+                c.beginPath()
+                c.strokeStyle = co
+                c.lineWidth = s
                 c.lineTo(x, y)
                 c.stroke()
               }
@@ -122,9 +151,7 @@
     })
   }
 
-  $.fn.draw.defaults = {
-    colors: ['#000']
-  }
+  $.fn.draw.defaults = {}
 
   $.fn.draw.Constructor = Draw
 
