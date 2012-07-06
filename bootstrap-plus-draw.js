@@ -18,6 +18,7 @@
         .on('click', '[data-clear="draw"]', $.proxy(this.clear, this))
         .on('click', '[data-color]', $.proxy(this.setColor, this))
         .on('click', '[data-size]', $.proxy(this.setSize, this))
+        .on('change', '[data-playback]', $.proxy(this.playback, this))
       this.$canvas = $(canvas, this.$element)
       this.c = this.$canvas.get(0).getContext('2d')
       this.offset = this.$element.offset()
@@ -106,6 +107,13 @@
       var $t = $(size.currentTarget)
       this.size = $t.data('size')
       return true;
+    }
+
+    , playback: function(e) {
+      var $i = $(e.currentTarget)
+        , data = $i.val();
+
+      $.proxy(this.play(data), this)
     }
 
     , play: function(data) {
