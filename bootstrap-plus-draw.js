@@ -13,17 +13,19 @@
     , Draw = function (element, options) {
       this.options = $.extend({}, $.fn.draw.defaults, options)
       this.points = []
-      this.$element = $(element).parent()
-        .on('mousedown.draw.data-api', '[data-draw="canvas"]', $.proxy(this.start, this))
-        .on('click', '[data-clear="draw"]', $.proxy(this.clear, this))
+      this.$parent = $(element).parent()
+        .on('mousedown.draw.data-api', '[data-draw=canvas]', $.proxy(this.start, this))
+        .on('click', '[data-clear=draw]', $.proxy(this.clear, this))
         .on('click', '[data-color]', $.proxy(this.setColor, this))
         .on('click', '[data-size]', $.proxy(this.setSize, this))
-        .on('change', '[data-playback]', $.proxy(this.playback, this))
-      this.$canvas = $(canvas, this.$element)
+      this.$canvas = $(canvas, this.$parent)
       this.c = this.$canvas.get(0).getContext('2d')
-      this.offset = this.$element.offset()
+      this.offset = this.$parent.offset()
       this.color = "#000"
       this.size = 1
+      this.$recording = $('[data-recording=draw]', this.$parent)
+      this.$playback = $('[data-playback=draw]', this.$parent)
+      this.$playback.length && this.play(JSON.parse(this.$playback.val()))
     }
 
   Draw.prototype = {
@@ -31,6 +33,9 @@
 
     , start: function(e) {
       e && e.preventDefault()
+
+      if (this.$canvas.data('enabled') == false) 
+          return false
 
       this.$canvas
         .on('mouseup.draw.data-api', $.proxy(this.stop, this))
@@ -47,7 +52,7 @@
     , stop: function(e) {
       e && e.preventDefault()
 
-     this.$canvas
+      this.$canvas
         .off('mouseup.draw.data-api', $.proxy(this.stop, this))
         .off('mouseout.draw.data-api', $.proxy(this.stop, this))
         .off('mousemove.draw.data-api', $.proxy(this.move, this))
@@ -62,6 +67,7 @@
       this.addLine(x, y)
       this.drawLine(x, y)
     }
+
     , drawPoint: function(x, y) {
       var c = this.c
       c.beginPath()
@@ -78,10 +84,12 @@
 
     , addPoint: function(x, y) {
       this.points.push({ x: x, y: y, t: new Date().getTime(), isPoint: true, color: this.color, size: this.size })
+      this.updateRecording()
     }
 
     , addLine: function(x, y) {
       this.points.push({ x: x, y: y, t: new Date().getTime(), isPoint: false, color: this.color, size: this.size })
+      this.updateRecording()
     }
 
     , clear: function() {
@@ -89,6 +97,11 @@
         , $canvas = this.$canvas
       c.clearRect(0, 0, $canvas.width(), $canvas.height())
       this.points = []
+      this.updateRecording()
+    }
+
+    , updateRecording: function() {
+      this.$recording.length && this.$recording.val(JSON.stringify(this.points));
     }
 
     , setColor: function(color) {
@@ -109,19 +122,11 @@
       return true;
     }
 
-    , playback: function(e) {
-      var $i = $(e.currentTarget)
-        , data = $i.val();
-
-      $.proxy(this.play(data), this)
-    }
-
     , play: function(data) {
       !data && (data = this.points)
-      this.clear()
-      var c = this.c
-        , i
 
+      var c = this.c
+        , i;
       for (i = 0; i < data.length; i++) {
         var pt = data[i]
           , x = pt.x
@@ -130,20 +135,16 @@
           , p = pt.isPoint
           , co = pt.color
           , s = pt.size
-          setTimeout(function(){
-            (function(c, p, x, y){
-              if (p) {
-                c.beginPath()
-                c.moveTo(x, y)
-              } else {
-                c.beginPath()
-                c.strokeStyle = co
-                c.lineWidth = s
-                c.lineTo(x, y)
-                c.stroke()
-              }
-            })(c, p, x, y)
-          }, 0)
+
+          if (p) {        
+            c.beginPath()
+            c.moveTo(x, y)
+          } else {
+            c.strokeStyle = co
+            c.lineWidth = s
+            c.lineTo(x, y)
+            c.stroke()
+          }
       }
     }
   } 
@@ -167,7 +168,7 @@
   * =============== */
 
   $(document).ready(function(){
-    $('[data-draw]').draw();
+    $('[data-draw=canvas]').draw();
   })
 
 }(window.jQuery);
